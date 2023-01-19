@@ -15,12 +15,13 @@ def find_ownIP():
     return ownIP
 ownIP = find_ownIP()
 
+# Constants
 BC_PORT = 59999  # Broadcast Listening Port
 UC_PORT = 60000  # Unicast Listening Port
 UDP_PORT = 59998 # UDP Listening Port
 RING_PORT = 59997 # UDP Listening Port for leader election
 
-# Global variables to storage the state of the system
+# Global variables to store the state of the system
 lead_ADDRESS = ''
 server_LIST = [[], []]
 client_LIST = [[], [], [], []]
@@ -28,10 +29,12 @@ triggerElection = False
 electionInProgress = False
 next_SERVER = ''
 
+# Returns the current time
 def get_currentTimeMicro():
     return (f'<{datetime.now().strftime("%H:%M:%S.%f")}> ')
 gctm = get_currentTimeMicro
 
+# Sends heartbeat messages to all connected servers and checks for responses
 def monitor_Server():
     global lead_ADDRESS
     global triggerElection
@@ -81,6 +84,7 @@ def monitor_Server():
                             UDP_SENDER(task="requestUpdate")
         time.sleep(5)
 
+# Sends UDP messages to clients and servers depending on the task the function is called with
 def UDP_SENDER(task):
     global next_SERVER
     UDP_SenderSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -127,11 +131,13 @@ def UDP_SENDER(task):
 
     UDP_SenderSocket.close()
 
+# Forms a ring of servers
 def form_Ring(servers):
     sorted_binary_ring = sorted([socket.inet_aton(server[0]) for server in servers[0]])
     sorted_ip_ring = [socket.inet_ntoa(node) for node in sorted_binary_ring]
     return sorted_ip_ring
 
+# Returns the next server in the ring
 def get_nextServer(ring):
     current_node_index = ring.index(ownIP) if ownIP in ring else -1
     if current_node_index != -1:   
@@ -142,6 +148,7 @@ def get_nextServer(ring):
     else:
         return None
 
+# Listens for incoming election messages and participates in the election process
 def RING_Listener():
     global lead_ADDRESS
     global triggerElection
@@ -213,6 +220,7 @@ def RING_Listener():
 
             data = None
 
+# Listens for incoming messages and processes them based on their content
 def UDP_Listener():
     global next_SERVER
 
@@ -252,7 +260,7 @@ def UDP_Listener():
     finally:
         UDP_ListenSocket.close()
 
-# Broadcast Listener for Server and Client 
+# Broadcast listener for Server and Client 
 def BC_Listener():
     global next_SERVER
     bc_ListenSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -290,6 +298,7 @@ def BC_Listener():
     except ConnectionResetError:
         print(f'{gctm()}BC_Listener: Connection was closed, client probably crashed ...')
 
+# Sends a broadcast message over the network asking to join a server group and listens for a response that it can work with
 def BC_Sender(port):
     global lead_ADDRESS
     global next_SERVER
@@ -316,6 +325,7 @@ def BC_Sender(port):
             print(f'{gctm()}BC_Sender: No other server found, creating group and setting myself as leader. \n{gctm()}Current Leader is {lead_ADDRESS}')
             break
 
+# Accpets data in and updates the server_LIST, client_LIST and lead_ADDRESS variables
 def create_ServerList(data):
     global lead_ADDRESS
     global server_LIST
@@ -354,6 +364,7 @@ def create_ServerList(data):
     lead_ADDRESS = current_leader
     #print(f'{gctm()}current leader: {lead_ADDRESS}')
 
+# Thread that handles the connection with a client
 def client_Thread(conn, addr):
     # sends a message to the client whose user object is conn    
     conn.sendall(bytes("request_server_client_setup", 'UTF-8'))
@@ -410,6 +421,7 @@ def client_Thread(conn, addr):
             #logging.Logger.exception(e)
             continue
 
+# Removes a disconnected client from the list of connected clients
 def remove_ClientConnection(connection):
     try:
         index = server_LIST[0].index(connection)
@@ -421,6 +433,7 @@ def remove_ClientConnection(connection):
     del client_LIST[2][index]
     del client_LIST[3][index]
 
+#  Removes a server from the list of connected servers
 def remove_ServerConnection(connection):
     try:
         index = server_LIST[0].index(connection)
@@ -430,6 +443,7 @@ def remove_ServerConnection(connection):
     del server_LIST[0][index]
     del server_LIST[1][index]
 
+# Listens for incoming client connections and starts the function client_Thread()
 def UC_Listener():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -444,6 +458,7 @@ def UC_Listener():
             print(f'{gctm()}UC_Listener: {addr[0]} connected, starting own thread')
             threading.Thread(target=client_Thread, args=(conn, addr)).start()
 
+# Starts several threads
 if __name__ == '__main__':
     ownIP = find_ownIP()
     print(f'{gctm()}Default network adapter to use: {ownIP}')

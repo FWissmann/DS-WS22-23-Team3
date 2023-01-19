@@ -1,13 +1,15 @@
 import socket, time, threading, sys, os, signal
 from datetime import datetime
 
+# Global variables to store the state of the system
 serverAddress = ''
 UDP_Addr = ''
 sendMessage = None
 connectAttempts = 0
 
-BC_Port = 59999
-UC_Port = 60000
+# Constants
+BC_Port = 59999 # Broadcast Listening Port
+UC_Port = 60000 # Unicast Listening Port
 
 # Get own IP address
 def find_ownIP():
@@ -22,10 +24,12 @@ def find_ownIP():
         fs.close()
     return ownIP
 
+# Returns the current time
 def get_currentTimeMicro():
     return (f'<{datetime.now().strftime("%H:%M:%S.%f")}> ')
 gctm = get_currentTimeMicro
 
+# Broadcast a message to join a chat
 def BC_Sender(port):
     BC_SenderSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     BC_SenderSocket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -44,6 +48,7 @@ def BC_Sender(port):
         finally:
             BC_SenderSocket.close()
 
+# Listen for UDP messages from servers on the network
 def UDP_Listener():
     global UDP_ListenSocket
     global UDP_Addr
@@ -66,6 +71,7 @@ def UDP_Listener():
                 new_leadServer = message.split(";")[1]
                 serverAddress = new_leadServer
 
+# Waits for user input and stores it
 def get_Text():
     global sendMessage
     while True:
@@ -78,6 +84,7 @@ def get_Text():
                 os.kill(os.getpid(), signal.SIGINT)
         sendMessage = message
 
+# Sends messages to a server
 def UC_Sender(port, IP_address):
     global serverAddress
     global sendMessage
@@ -139,8 +146,8 @@ def UC_Sender(port, IP_address):
             messsage = data.decode()
             print(f'{messsage}')
 
+# Entry point of the script, calling functions and running scripts
 if __name__ == '__main__':
-
     ownIP = find_ownIP()
     print(f'{gctm()}Main thread: Your IP is: {ownIP}\nPlease check if this appears to be true, otherwise disconnect VPN.')
     t1 = threading.Thread(target=UDP_Listener)
